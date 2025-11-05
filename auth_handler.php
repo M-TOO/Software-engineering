@@ -5,19 +5,41 @@
  * ensuring compliance with the CAASP database schema (Locations, Users, Roles, UserRole, Garages, Vendors tables).
  */
 
-// Include database configuration (assuming this file is in the same directory)
+// Include database configuration (connect_db() and session_start() are here)
 require_once 'api_db_config.php';
 
+// Define the dashboard files for redirection
+$dashboard_files = [
+    'Customer' => 'customer_dashboard.php',
+    'Garage' => 'garage_dashboard.php',
+    'Vendor' => 'vendor_dashboard.php',
+];
+
 // Helper function to safely redirect
-function redirect_with_status($status, $message, $role = null) {
-    // Start with the base URL and status/message
-    $redirect_url = "index.html?status=" . urlencode($status) . "&message=" . urlencode($message);
+// The $user_id and $role parameters are only used for successful LOGIN redirection
+function redirect_with_status($status, $message, $user_id = null, $role = null) {
     
-    // Append the role if provided (useful for post-login redirect or debugging)
-    if ($role) {
-        $redirect_url .= "&role=" . urlencode($role);
+    // Check if redirecting to a dashboard is required (only for successful login)
+    if ($status === 'success' && $user_id && $role) {
+        
+        // 1. Set Session Variables (for security and to hide ID)
+        $_SESSION['user_id'] = $user_id;
+        $_SESSION['role'] = $role;
+
+        // 2. Redirect to the appropriate dashboard page (no query string)
+        $dashboard_files = [
+            'Customer' => 'customer_dashboard.php',
+            'Garage' => 'garage_dashboard.php',
+            'Vendor' => 'vendor_dashboard.php',
+        ];
+        $dashboard_file = $dashboard_files[$role] ?? 'index.html';
+        
+        header("Location: {$dashboard_file}");
+        exit;
     }
     
+    // Fallback: Redirect back to index.html (used for all errors and registration success)
+    $redirect_url = "index.html?status=" . urlencode($status) . "&message=" . urlencode($message);
     header("Location: " . $redirect_url);
     exit;
 }
@@ -34,14 +56,12 @@ if (isset($_POST['register_submit'])) {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
     $role_input = $_POST['role'] ?? ''; 
-    // Additional fields from index.html form
     $contact = trim($_POST['contact']);
     $city = trim($_POST['city']);
     $district = trim($_POST['district']);
-    // NEW OPTIONAL FIELD: business_name (Garage/Vendor Name)
     $business_name = trim($_POST['business_name'] ?? '');
     
-    $role_schema = $allowed_roles[$role_input] ?? null; // Convert input to schema name (e.g., 'vendor' -> 'Vendor')
+    $role_schema = $allowed_roles[$role_input] ?? null;
 
     // 1. Basic validation
     if (empty($email) || empty($password) || empty($role_schema) || empty($contact) || empty($city) || empty($district)) {
@@ -53,7 +73,8 @@ if (isset($_POST['register_submit'])) {
         redirect_with_status('error', 'Business Name is required for ' . ucwords($role_schema) . ' registration.');
     }
     
-    $db = connect_db();
+    // **USING connect_db() defined in api_db_config.php**
+    $db = connect_db(); 
     if (!$db) {
         redirect_with_status('error', 'Database connection failed. Check api_db_config.php.');
     }
@@ -91,7 +112,6 @@ if (isset($_POST['register_submit'])) {
         }
 
         // B. Insert into Locations table (Need placeholder latitude/longitude based on schema)
-        // Using placeholder values as required by the schema's NOT NULL constraints.
         $sql_location = "INSERT INTO Locations (city, district, latitude, longitude) VALUES (?, ?, ?, ?)";
         $default_lat = 0.00000000;
         $default_long = 0.00000000;
@@ -112,21 +132,30 @@ if (isset($_POST['register_submit'])) {
              throw new Exception('Internal server error (SQL preparation failed for location).');
         }
 
-        // C. Insert into Users table
-        // Column names used: email, password, contact, location_id
-        $sql_user = "INSERT INTO Users (email, password, contact, location_id) VALUES (?, ?, ?, ?)";
+        // C. Insert into Users table - ADDING INITIAL BALANCE LOGIC
+        // Column names used: email, password, contact, location_id, account_balance
+        $sql_user = "INSERT INTO Users (email, password, contact, location_id, account_balance) VALUES (?, ?, ?, ?, ?)";
+        
+        $initial_balance = 0.00;
+        // Only give customers the initial balance
+        if ($role_schema === 'Customer') {
+            $initial_balance = 10000.00;
+        }
+
         if ($stmt = mysqli_prepare($db, $sql_user)) {
-            // Bind parameters: 3 strings, 1 integer
-            mysqli_stmt_bind_param($stmt, "sssi", 
+            // Bind parameters: 3 strings, 1 integer, 1 double
+            mysqli_stmt_bind_param($stmt, "sssid", 
                 $param_email, 
                 $param_password, 
                 $param_contact, 
-                $param_location_id
+                $param_location_id,
+                $param_balance // New: initial balance parameter
             );
             $param_email = $email;
             $param_password = $hashed_password; 
             $param_contact = $contact;
             $param_location_id = $location_id;
+            $param_balance = $initial_balance; // New: binding the balance
             
             if (!mysqli_stmt_execute($stmt)) {
                 throw new Exception('Failed to create user account.');
@@ -138,7 +167,6 @@ if (isset($_POST['register_submit'])) {
         }
 
         // D. Insert into UserRole junction table
-        
         // D1. Get the role_id from the Roles table
         $sql_role_id = "SELECT role_id FROM Roles WHERE role_name = ?";
         $role_id = null;
@@ -211,7 +239,10 @@ if (isset($_POST['register_submit'])) {
         // F. Commit the transaction if all inserts succeeded
         mysqli_commit($db);
         mysqli_close($db);
-        redirect_with_status('success', "Registration successful! You are signed up as a " . ucwords($role_schema) . " (" . $business_name . "). You can now log in.");
+        
+        // --- REGISTRATION SUCCESS REDIRECT: Redirects back to index.html with success status ---
+        $success_msg = "Registration successful! Your account is pre-funded with KES 10,000.00. Please log in as a " . ucwords($role_schema) . ".";
+        redirect_with_status('success', $success_msg); 
 
     } catch (Exception $e) {
         // --- TRANSACTION ROLLBACK ---
@@ -221,7 +252,7 @@ if (isset($_POST['register_submit'])) {
     }
 
 } 
-// --- Check for Login Form Submission (No changes needed here for this request) ---
+// --- Check for Login Form Submission ---
 else if (isset($_POST['login_submit'])) {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
@@ -238,7 +269,7 @@ else if (isset($_POST['login_submit'])) {
         redirect_with_status('error', 'Database connection failed. Check api_db_config.php.');
     }
 
-    // SQL: Fetch user by email, including their hashed password, and join to get their actual role name(s)
+    // SQL: Fetch user details
     $sql = "SELECT 
                 U.user_id, 
                 U.password AS hashed_password, 
@@ -265,7 +296,8 @@ else if (isset($_POST['login_submit'])) {
                         mysqli_stmt_close($stmt);
                         mysqli_close($db);
                         
-                        redirect_with_status('success', 'Login successful! Welcome back, ' . ucwords($stored_role) . '.', $submitted_role_input);
+                        // --- LOGIN SUCCESS REDIRECT: Sets session and redirects to the appropriate dashboard (no ID in URL) ---
+                        redirect_with_status('success', 'Login successful!', $user_id, $stored_role);
                     } else {
                         mysqli_stmt_close($stmt);
                         mysqli_close($db);
@@ -275,13 +307,11 @@ else if (isset($_POST['login_submit'])) {
             } else {
                 mysqli_stmt_close($stmt);
                 mysqli_close($db);
-                // The query returns 0 if the email doesn't exist OR if the email exists but doesn't have the selected role.
                 redirect_with_status('error', 'Login failed. Account not found with that email and role combination.');
             }
         } else {
             mysqli_stmt_close($stmt);
             mysqli_close($db);
-            // Log real error here: mysqli_error($db)
             redirect_with_status('error', 'Login failed due to a database query error.');
         }
     } else {

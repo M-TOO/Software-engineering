@@ -1,29 +1,39 @@
 <?php
 /**
- * CAASP Database Configuration
- * * Defines constants for connecting to the database.
- * IMPORTANT: Replace the placeholder values below with your actual database credentials.
+ * Database Configuration for CAASP (MySQLi)
+ * * Defines global database credentials and the reusable connect_db function.
+ * This file is included via require_once in auth_handler.php and all dashboard files.
  */
 
-// Database Connection Details
-define('DB_SERVER', 'localhost');
-define('DB_USERNAME', 'root'); // CHANGE THIS
-define('DB_PASSWORD', ''); // CHANGE THIS
-define('DB_NAME', 'caasp'); // CHANGE THIS
+// --- Session Management ---
+// Start the session *before* any output is sent.
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Database Credentials (UPDATE THESE WITH YOUR ACTUAL SETTINGS)
+$db_host = "localhost";
+$db_user = "root";
+$db_pass = ""; // Typically empty for XAMPP/local setups
+$db_name = "caasp"; // Replace with your actual database name
 
 /**
- * Connects to the database and returns the connection object.
- * @return mysqli|null The database connection object or null on failure.
+ * Establishes a connection to the MySQL database.
+ * @return mysqli|false The database connection resource or false on failure.
  */
 function connect_db() {
-    $link = mysqli_connect(DB_SERVER, DB_USERNAME, DB_PASSWORD, DB_NAME);
-
-    // Check connection
-    if ($link === false) {
-        // In a real application, log this error instead of echoing it publicly
-        return null;
+    // These variables are available globally because they were declared outside the function scope
+    global $db_host, $db_user, $db_pass, $db_name;
+    
+    $db = mysqli_connect($db_host, $db_user, $db_pass, $db_name);
+    
+    if (mysqli_connect_errno()) {
+        // Log the detailed error but return a generic failure message
+        error_log("Failed to connect to MySQL: " . mysqli_connect_error());
+        return false;
     }
-    return $link;
+    
+    return $db;
 }
 
 ?>
