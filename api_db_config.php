@@ -9,7 +9,7 @@
 define('DB_SERVER', 'localhost');
 define('DB_USERNAME', 'root'); // CHANGE THIS
 define('DB_PASSWORD', ''); // CHANGE THIS
-define('DB_NAME', 'caasp'); // CHANGE THIS
+define('DB_NAME', 'caasp_db'); // CHANGE THIS
 
 /**
  * Connects to the database and returns the connection object.
