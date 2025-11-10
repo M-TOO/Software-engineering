@@ -9,7 +9,7 @@
 define('DB_SERVER', 'localhost');
 define('DB_USERNAME', 'root'); 
 define('DB_PASSWORD', '');
-define('DB_NAME', 'caasp_sql'); 
+define('DB_NAME', 'caasp_db'); 
 // --- Session Management ---
 // Start the session *before* any output is sent.
 if (session_status() == PHP_SESSION_NONE) {
