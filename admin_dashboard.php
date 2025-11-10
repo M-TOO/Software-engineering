@@ -2,8 +2,6 @@
 /**
  * CAASP Admin Dashboard
  * * Manages business approvals, user accounts, and content moderation.
- * * NOTE: This file assumes the database has the 'is_approved' column in the Users table 
- * and the 'Admin' role in the Roles table.
  */
 
 // Includes database configuration (and starts session)
@@ -21,6 +19,7 @@ if (!$user_id || $role !== 'Admin') {
     header("Location: index.html?status=error&message=" . urlencode("Access denied. Admin login required."));
     exit;
 }
+// --- END AUTHENTICATION CHECK ---
 
 
 // Determine the current view
