@@ -34,7 +34,7 @@ CREATE TABLE `garages` (
   `profile_image_path` varchar(255) DEFAULT NULL,
   `user_id` int(11) NOT NULL,
   `location_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb84_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `garages`
@@ -230,18 +230,19 @@ CREATE TABLE `users` (
   `contact` varchar(20) DEFAULT NULL,
   `location_id` int(11) DEFAULT NULL,
   `account_balance` decimal(10, 2) NOT NULL DEFAULT 0.00, -- NEW: Added for customer funds
-  `is_approved` tinyint(1) NOT NULL DEFAULT 1 -- NEW: Added for business approval (1=Approved, 0=Pending)
+  `is_approved` tinyint(1) NOT NULL DEFAULT 1, -- NEW: Added for business approval (1=Approved, 0=Pending)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() -- NEW: Added for registration timestamp
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`user_id`, `email`, `password`, `contact`, `location_id`, `account_balance`, `is_approved`) VALUES
-(1, 'customer@example.com', '$2y$10$tUj5n8F1uP9E7gR9c4k1O.4g5s8W7x9E0z2V3B4C5D6E7F8G9H0I', '0700111222', 3, 10000.00, 1), -- Updated balance for customer
-(2, 'garage@example.com', '$2y$10$tUj5n8F1uP9E7gR9c4k1O.4g5s8W7x9E0z2V3B4C5D6E7F8G9H0I', '0711333444', 1, 0.00, 1), -- Default approved
-(3, 'vendor@example.com', '$2y$10$tUj5n8F1uP9E7gR9c4k1O.4g5s8W7x9E0z2V3B4C5D6E7F8G9H0I', '0722555666', 2, 0.00, 1), -- Default approved
-(4, 'elavazasandra73@gmail.com', '$2y$10$fnuuQLKmrgHADnonk/jfHeOK6ZJS9D0Zz5.qmlpoVMNzbyld9J23a', '0111820845', 4, 0.00, 1); -- Default approved
+INSERT INTO `users` (`user_id`, `email`, `password`, `contact`, `location_id`, `account_balance`, `is_approved`, `created_at`) VALUES
+(1, 'customer@example.com', '$2y$10$tUj5n8F1uP9E7gR9c4k1O.4g5s8W7x9E0z2V3B4C5D6E7F8G9H0I', '0700111222', 3, 10000.00, 1, '2025-11-05 10:44:00'), -- Updated balance and added timestamps
+(2, 'garage@example.com', '$2y$10$tUj5n8F1uP9E7gR9c4k1O.4g5s8W7x9E0z2V3B4C5D6E7F8G9H0I', '0711333444', 1, 0.00, 1, '2025-11-05 10:44:00'), 
+(3, 'vendor@example.com', '$2y$10$tUj5n8F1uP9E7gR9c4k1O.4g5s8W7x9E0z2V3B4C5D6E7F8G9H0I', '0722555666', 2, 0.00, 1, '2025-11-05 10:44:00'), 
+(4, 'elavazasandra73@gmail.com', '$2y$10$fnuuQLKmrgHADnonk/jfHeOK6ZJS9D0Zz5.qmlpoVMNzbyld9J23a', '0111820845', 4, 0.00, 1, '2025-11-05 10:44:00'); 
 
 -- --------------------------------------------------------
 
