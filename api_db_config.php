@@ -16,11 +16,11 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Database Credentials (UPDATE THESE WITH YOUR ACTUAL SETTINGS)
+// Database Credentials 
 $db_host = "localhost";
 $db_user = "root";
-$db_pass = ""; // Typically empty for XAMPP/local setups
-$db_name = "caasp"; // Replace with your actual database name
+$db_pass = ""; 
+$db_name = "caasp_db"; 
 
 /**
  * Establishes a connection to the MySQL database.
@@ -30,7 +30,7 @@ function connect_db() {
     // These variables are available globally because they were declared outside the function scope
     global $db_host, $db_user, $db_pass, $db_name;
     
-    $db = mysqli_connect($db_host, $db_user, $db_pass, $db_name);
+    $db = mysqli_connect("localhost", "root", "", "caasp_db");
     
     if (mysqli_connect_errno()) {
         // Log the detailed error but return a generic failure message
