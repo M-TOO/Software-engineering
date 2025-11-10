@@ -7,9 +7,9 @@
 
 // Database Connection Details
 define('DB_SERVER', 'localhost');
-define('DB_USERNAME', 'root'); // CHANGE THIS
-define('DB_PASSWORD', ''); // CHANGE THIS
-define('DB_NAME', 'caasp_db'); // CHANGE THIS
+define('DB_USERNAME', 'root'); 
+define('DB_PASSWORD', '');
+define('DB_NAME', 'caasp_sql'); 
 // --- Session Management ---
 // Start the session *before* any output is sent.
 if (session_status() == PHP_SESSION_NONE) {
