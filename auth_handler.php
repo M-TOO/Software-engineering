@@ -1,13 +1,37 @@
 <?php
+session_start(); // 1. START THE PHP SESSION
+
 /**
  * CAASP Authentication Handler
- * * Processes synchronous form submissions for registration and login,
- * ensuring compliance with the CAASP database schema (Locations, Users, Roles, UserRole, Garages, Vendors tables).
+ * Processes synchronous form submissions for registration and login,
+ * ensuring compliance with the CAASP database schema.
  */
 
 // Include database configuration (connect_db() and session_start() are here)
 require_once 'api_db_config.php';
 
+<<<<<<< HEAD
+// Define the dashboard URLs (CORRECTED PATHS AND CASING)
+const GARAGE_DASHBOARD = 'Garage_Owner/garage_dashboard.php';
+const CUSTOMER_DASHBOARD = 'customer_dashboard.php'; // Assuming customer_dashboard.php is in the root
+const VENDOR_DASHBOARD = 'Vendor/vendor_dashboard.php';
+const LOGIN_PAGE = 'index.html';
+
+// Helper function to safely redirect
+function redirect_with_status($status, $message, $target_page = LOGIN_PAGE, $role = null) {
+    // If redirecting to the login page, append status messages via URL params
+    if ($target_page === LOGIN_PAGE) {
+        $redirect_url = LOGIN_PAGE . "?status=" . urlencode($status) . "&message=" . urlencode($message);
+        if ($role) {
+            $redirect_url .= "&role=" . urlencode($role);
+        }
+        header("Location: " . $redirect_url);
+    } else {
+        // If redirecting to a dashboard, we assume session variables carry status
+        // and we only need the base target URL.
+        header("Location: " . $target_page);
+    }
+=======
 // Define the dashboard files for redirection
 $dashboard_files = [
     'Customer' => 'customer_dashboard.php',
@@ -41,6 +65,7 @@ function redirect_with_status($status, $message, $user_id = null, $role = null) 
     // Fallback: Redirect back to index.html (used for all errors and registration success)
     $redirect_url = "index.html?status=" . urlencode($status) . "&message=" . urlencode($message);
     header("Location: " . $redirect_url);
+>>>>>>> dd453477155b8a2181e05f84b2cef3fbef382060
     exit;
 }
 
@@ -61,22 +86,26 @@ if (isset($_POST['register_submit'])) {
     $district = trim($_POST['district']);
     $business_name = trim($_POST['business_name'] ?? '');
     
+<<<<<<< HEAD
+    $role_schema = $allowed_roles[$role_input] ?? null; 
+=======
     $role_schema = $allowed_roles[$role_input] ?? null;
+>>>>>>> dd453477155b8a2181e05f84b2cef3fbef382060
 
     // 1. Basic validation
     if (empty($email) || empty($password) || empty($role_schema) || empty($contact) || empty($city) || empty($district)) {
-        redirect_with_status('error', 'All required registration fields are missing.');
+        redirect_with_status('error', 'All required registration fields are missing.', LOGIN_PAGE);
     }
     
     // 1b. Business Name validation for Garage/Vendor
     if (($role_schema === 'Garage' || $role_schema === 'Vendor') && empty($business_name)) {
-        redirect_with_status('error', 'Business Name is required for ' . ucwords($role_schema) . ' registration.');
+        redirect_with_status('error', 'Business Name is required for ' . ucwords($role_schema) . ' registration.', LOGIN_PAGE);
     }
     
     // **USING connect_db() defined in api_db_config.php**
     $db = connect_db(); 
     if (!$db) {
-        redirect_with_status('error', 'Database connection failed. Check api_db_config.php.');
+        redirect_with_status('error', 'Database connection failed. Check api_db_config.php.', LOGIN_PAGE);
     }
     
     // Sanitize and prepare
@@ -111,7 +140,11 @@ if (isset($_POST['register_submit'])) {
             throw new Exception('Internal server error (SQL preparation failed during email check).');
         }
 
+<<<<<<< HEAD
+        // B. Insert into Locations table
+=======
         // B. Insert into Locations table (Need placeholder latitude/longitude based on schema)
+>>>>>>> dd453477155b8a2181e05f84b2cef3fbef382060
         $sql_location = "INSERT INTO Locations (city, district, latitude, longitude) VALUES (?, ?, ?, ?)";
         $default_lat = 0.00000000;
         $default_long = 0.00000000;
@@ -132,6 +165,12 @@ if (isset($_POST['register_submit'])) {
              throw new Exception('Internal server error (SQL preparation failed for location).');
         }
 
+<<<<<<< HEAD
+        // C. Insert into Users table
+        $sql_user = "INSERT INTO Users (email, password, contact, location_id) VALUES (?, ?, ?, ?)";
+        if ($stmt = mysqli_prepare($db, $sql_user)) {
+            mysqli_stmt_bind_param($stmt, "sssi", 
+=======
         // C. Insert into Users table - ADDING INITIAL BALANCE LOGIC
         // Column names used: email, password, contact, location_id, account_balance
         $sql_user = "INSERT INTO Users (email, password, contact, location_id, account_balance) VALUES (?, ?, ?, ?, ?)";
@@ -145,6 +184,7 @@ if (isset($_POST['register_submit'])) {
         if ($stmt = mysqli_prepare($db, $sql_user)) {
             // Bind parameters: 3 strings, 1 integer, 1 double
             mysqli_stmt_bind_param($stmt, "sssid", 
+>>>>>>> dd453477155b8a2181e05f84b2cef3fbef382060
                 $param_email, 
                 $param_password, 
                 $param_contact, 
@@ -167,7 +207,10 @@ if (isset($_POST['register_submit'])) {
         }
 
         // D. Insert into UserRole junction table
+<<<<<<< HEAD
+=======
         // D1. Get the role_id from the Roles table
+>>>>>>> dd453477155b8a2181e05f84b2cef3fbef382060
         $sql_role_id = "SELECT role_id FROM Roles WHERE role_name = ?";
         $role_id = null;
         if ($stmt = mysqli_prepare($db, $sql_role_id)) {
@@ -186,7 +229,6 @@ if (isset($_POST['register_submit'])) {
             throw new Exception('Internal server error (SQL preparation failed for role ID).');
         }
         
-        // D2. Insert the user_id and role_id into UserRole
         $sql_user_role = "INSERT INTO UserRole (user_id, role_id) VALUES (?, ?)";
         if ($stmt = mysqli_prepare($db, $sql_user_role)) {
             mysqli_stmt_bind_param($stmt, "ii", $param_user_id, $param_role_id);
@@ -203,7 +245,6 @@ if (isset($_POST['register_submit'])) {
 
         // E. Insert into Garages or Vendors table (Conditional)
         if ($role_schema === 'Garage') {
-            // Insert into Garages table
             $sql_garage = "INSERT INTO Garages (garage_name, user_id, location_id) VALUES (?, ?, ?)";
             if ($stmt = mysqli_prepare($db, $sql_garage)) {
                 mysqli_stmt_bind_param($stmt, "sii", $param_garage_name, $param_user_id, $param_location_id);
@@ -219,7 +260,6 @@ if (isset($_POST['register_submit'])) {
                 throw new Exception('Internal server error (SQL preparation failed for Garages).');
             }
         } elseif ($role_schema === 'Vendor') {
-            // Insert into Vendors table
             $sql_vendor = "INSERT INTO Vendors (vendor_name, user_id, location_id) VALUES (?, ?, ?)";
             if ($stmt = mysqli_prepare($db, $sql_vendor)) {
                 mysqli_stmt_bind_param($stmt, "sii", $param_vendor_name, $param_user_id, $param_location_id);
@@ -239,16 +279,20 @@ if (isset($_POST['register_submit'])) {
         // F. Commit the transaction if all inserts succeeded
         mysqli_commit($db);
         mysqli_close($db);
+<<<<<<< HEAD
+        redirect_with_status('success', "Registration successful! You are signed up as a " . ucwords($role_schema) . " (" . $business_name . "). You can now log in.", LOGIN_PAGE);
+=======
         
         // --- REGISTRATION SUCCESS REDIRECT: Redirects back to index.html with success status ---
         $success_msg = "Registration successful! Your account is pre-funded with KES 10,000.00. Please log in as a " . ucwords($role_schema) . ".";
         redirect_with_status('success', $success_msg); 
+>>>>>>> dd453477155b8a2181e05f84b2cef3fbef382060
 
     } catch (Exception $e) {
         // --- TRANSACTION ROLLBACK ---
         mysqli_rollback($db);
         mysqli_close($db);
-        redirect_with_status('error', $e->getMessage());
+        redirect_with_status('error', $e->getMessage(), LOGIN_PAGE);
     }
 
 } 
@@ -261,19 +305,18 @@ else if (isset($_POST['login_submit'])) {
     $submitted_role_schema = $allowed_roles[$submitted_role_input] ?? null;
 
     if (empty($email) || empty($password) || empty($submitted_role_schema)) {
-        redirect_with_status('error', 'All fields are required for login.');
+        redirect_with_status('error', 'All fields are required for login.', LOGIN_PAGE);
     }
     
     $db = connect_db();
     if (!$db) {
-        redirect_with_status('error', 'Database connection failed. Check api_db_config.php.');
+        redirect_with_status('error', 'Database connection failed. Check api_db_config.php.', LOGIN_PAGE);
     }
 
     // SQL: Fetch user details
     $sql = "SELECT 
                 U.user_id, 
-                U.password AS hashed_password, 
-                R.role_name AS stored_role 
+                U.password AS hashed_password
             FROM Users U
             JOIN UserRole UR ON U.user_id = UR.user_id
             JOIN Roles R ON UR.role_id = R.role_id
@@ -289,38 +332,103 @@ else if (isset($_POST['login_submit'])) {
             
             if (mysqli_stmt_num_rows($stmt) == 1) {
                 // Bind result variables
-                mysqli_stmt_bind_result($stmt, $user_id, $hashed_password, $stored_role);
+                mysqli_stmt_bind_result($stmt, $user_id, $hashed_password);
                 if (mysqli_stmt_fetch($stmt)) {
+                    
+                    // 2. Verify Password
                     if (password_verify($password, $hashed_password)) {
-                        // Success!
+                        
+                        // 3. Set basic Session Variables
+                        $_SESSION['user_id'] = $user_id;
+                        $_SESSION['role'] = $submitted_role_schema;
+                        
+                        $dashboard_target = LOGIN_PAGE;
+                        
+                        // 4. Determine Dashboard and fetch specific ID
+                        if ($submitted_role_schema == 'Garage') {
+                            // Fetch garage_id
+                            $sql_garage = "SELECT garage_id FROM Garages WHERE user_id = ?";
+                            if ($stmt_g = mysqli_prepare($db, $sql_garage)) {
+                                mysqli_stmt_bind_param($stmt_g, "i", $user_id);
+                                mysqli_stmt_execute($stmt_g);
+                                mysqli_stmt_bind_result($stmt_g, $garage_id);
+                                if (mysqli_stmt_fetch($stmt_g)) {
+                                    $_SESSION['garage_id'] = $garage_id;
+                                    $dashboard_target = GARAGE_DASHBOARD;
+                                }
+                                mysqli_stmt_close($stmt_g);
+                            }
+                            // Fallback if garage ID fetch fails: stay on login page with error
+                            if($dashboard_target === LOGIN_PAGE) {
+                                redirect_with_status('error', 'Login successful, but Garage profile data is missing.', LOGIN_PAGE);
+                            }
+                        } elseif ($submitted_role_schema == 'Vendor') {
+                            // Fetch vendor_id (FIXED)
+                            $sql_vendor = "SELECT vendor_id FROM Vendors WHERE user_id = ?";
+                            if ($stmt_v = mysqli_prepare($db, $sql_vendor)) {
+                                mysqli_stmt_bind_param($stmt_v, "i", $user_id);
+                                mysqli_stmt_execute($stmt_v);
+                                mysqli_stmt_bind_result($stmt_v, $vendor_id);
+                                if (mysqli_stmt_fetch($stmt_v)) {
+                                    $_SESSION['vendor_id'] = $vendor_id; // CRITICAL: SESSION VARIABLE SET
+                                    $dashboard_target = VENDOR_DASHBOARD;
+                                }
+                                mysqli_stmt_close($stmt_v);
+                            }
+                            // Fallback if vendor ID fetch fails: stay on login page with error
+                            if($dashboard_target === LOGIN_PAGE) {
+                                redirect_with_status('error', 'Login successful, but Vendor profile data is missing.', LOGIN_PAGE);
+                            }
+                        } else {
+                            // Customer
+                            $dashboard_target = CUSTOMER_DASHBOARD;
+                        }
+
                         mysqli_stmt_close($stmt);
                         mysqli_close($db);
                         
+<<<<<<< HEAD
+                        // 5. Redirect to the determined Dashboard
+                        redirect_with_status('success', 'Login successful!', $dashboard_target);
+                        
+=======
                         // --- LOGIN SUCCESS REDIRECT: Sets session and redirects to the appropriate dashboard (no ID in URL) ---
                         redirect_with_status('success', 'Login successful!', $user_id, $stored_role);
+>>>>>>> dd453477155b8a2181e05f84b2cef3fbef382060
                     } else {
+                        // Invalid Password
                         mysqli_stmt_close($stmt);
                         mysqli_close($db);
-                        redirect_with_status('error', 'Invalid password for the specified role and account.');
+                        redirect_with_status('error', 'Invalid password for the specified role and account.', LOGIN_PAGE);
                     }
                 }
             } else {
                 mysqli_stmt_close($stmt);
                 mysqli_close($db);
+<<<<<<< HEAD
+                // The query returns 0 if the email doesn't exist OR if the email exists but doesn't have the selected role.
+                redirect_with_status('error', 'Login failed. Account not found with that email and role combination.', LOGIN_PAGE);
+=======
                 redirect_with_status('error', 'Login failed. Account not found with that email and role combination.');
+>>>>>>> dd453477155b8a2181e05f84b2cef3fbef382060
             }
         } else {
             mysqli_stmt_close($stmt);
             mysqli_close($db);
+<<<<<<< HEAD
+            // Log real error here: mysqli_error($db)
+            redirect_with_status('error', 'Login failed due to a database query error.', LOGIN_PAGE);
+=======
             redirect_with_status('error', 'Login failed due to a database query error.');
+>>>>>>> dd453477155b8a2181e05f84b2cef3fbef382060
         }
     } else {
         mysqli_close($db);
-        redirect_with_status('error', 'Internal server error during login preparation (SQL preparation failed).');
+        redirect_with_status('error', 'Internal server error during login preparation (SQL preparation failed).', LOGIN_PAGE);
     }
 
 } else {
     // If accessed directly without a POST, redirect back.
-    redirect_with_status('error', 'Access denied. Use the forms to submit data.');
+    redirect_with_status('error', 'Access denied. Use the forms to submit data.', LOGIN_PAGE);
 }
 ?>
