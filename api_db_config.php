@@ -5,6 +5,13 @@
  * This file is included via require_once in auth_handler.php and all dashboard files.
  */
 
+<<<<<<< HEAD
+// Database Connection Details
+define('DB_SERVER', 'localhost');
+define('DB_USERNAME', 'root'); // CHANGE THIS
+define('DB_PASSWORD', ''); // CHANGE THIS
+define('DB_NAME', 'caasp_db'); // CHANGE THIS
+=======
 // --- Session Management ---
 // Start the session *before* any output is sent.
 if (session_status() == PHP_SESSION_NONE) {
@@ -16,6 +23,7 @@ $db_host = "localhost";
 $db_user = "root";
 $db_pass = ""; // Typically empty for XAMPP/local setups
 $db_name = "caasp"; // Replace with your actual database name
+>>>>>>> dd453477155b8a2181e05f84b2cef3fbef382060
 
 /**
  * Establishes a connection to the MySQL database.
