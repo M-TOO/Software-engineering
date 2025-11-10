@@ -16,6 +16,10 @@
         .container-card {
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
         }
+        /* ADDED: Simple fix to ensure enough height for dropdowns to show options */
+        select {
+             min-height: 40px; 
+        }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
@@ -25,8 +29,7 @@
         
         <!-- Status Message Area -->
         <div id="status-message" class="mb-4 hidden" role="alert">
-            <!-- Messages displayed here by JavaScript -->
-        </div>
+            </div>
 
         <!-- Tab Controls -->
         <div class="flex border-b mb-6">
@@ -47,6 +50,7 @@
                         <option value="customer">Customer</option>
                         <option value="garage_owner">Garage Owner</option>
                         <option value="vendor">Spare Part Vendor</option>
+                        <option value="admin">Admin</option>
                     </select>
                 </div>
 
@@ -113,6 +117,7 @@
                         <option value="customer">Customer</option>
                         <option value="garage_owner">Garage Owner</option>
                         <option value="vendor">Spare Part Vendor</option>
+                        <option value="admin">Admin</option>
                     </select>
                 </div>
 
@@ -177,13 +182,14 @@
 
             function toggleBusinessNameField() {
                 const selectedRole = registerRoleSelect.value;
+                // Exclude 'admin' from requiring a business name
                 if (selectedRole === 'garage_owner' || selectedRole === 'vendor') {
                     businessNameGroup.classList.remove('hidden');
                     // Mark as required for handler validation
                     document.getElementById('business_name').setAttribute('required', 'required'); 
                 } else {
                     businessNameGroup.classList.add('hidden');
-                    // Remove required attribute for customer
+                    // Remove required attribute for customer and admin
                     document.getElementById('business_name').removeAttribute('required');
                 }
             }

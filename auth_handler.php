@@ -13,6 +13,7 @@ $dashboard_files = [
     'Customer' => 'customer_dashboard.php',
     'Garage' => 'garage_dashboard.php',
     'Vendor' => 'vendor_dashboard.php',
+    'Admin' => 'admin_dashboard.php', 
 ];
 
 // Helper function to safely redirect
@@ -31,6 +32,7 @@ function redirect_with_status($status, $message, $user_id = null, $role = null) 
             'Customer' => 'customer_dashboard.php',
             'Garage' => 'garage_dashboard.php',
             'Vendor' => 'vendor_dashboard.php',
+            'Admin' => 'admin_dashboard.php', 
         ];
         $dashboard_file = $dashboard_files[$role] ?? 'index.html';
         
@@ -48,7 +50,8 @@ function redirect_with_status($status, $message, $user_id = null, $role = null) 
 $allowed_roles = [
     'customer' => 'Customer', 
     'garage_owner' => 'Garage', 
-    'vendor' => 'Vendor'
+    'vendor' => 'Vendor',
+    'admin' => 'Admin', 
 ];
 
 // --- Check for Registration Form Submission ---
@@ -69,7 +72,9 @@ if (isset($_POST['register_submit'])) {
     }
     
     // 1b. Business Name validation for Garage/Vendor
-    if (($role_schema === 'Garage' || $role_schema === 'Vendor') && empty($business_name)) {
+    $is_business_role = ($role_schema === 'Garage' || $role_schema === 'Vendor'); // NEW: Flag for business roles
+    
+    if ($is_business_role && empty($business_name)) {
         redirect_with_status('error', 'Business Name is required for ' . ucwords($role_schema) . ' registration.');
     }
     
@@ -132,33 +137,43 @@ if (isset($_POST['register_submit'])) {
              throw new Exception('Internal server error (SQL preparation failed for location).');
         }
 
-        // C. Insert into Users table - ADDING INITIAL BALANCE LOGIC
-        // Column names used: email, password, contact, location_id, account_balance
-        $sql_user = "INSERT INTO Users (email, password, contact, location_id, account_balance) VALUES (?, ?, ?, ?, ?)";
+        // C. Insert into Users table - ADDING INITIAL BALANCE AND APPROVAL STATUS LOGIC (Requires 'is_approved' column in Users table)
+        // Column names used: email, password, contact, location_id, account_balance, is_approved
+        $sql_user = "INSERT INTO Users (email, password, contact, location_id, account_balance, is_approved) VALUES (?, ?, ?, ?, ?, ?)";
         
         $initial_balance = 0.00;
+        $is_approved = 1; // Default to Approved (for Customer/Admin)
+        
         // Only give customers the initial balance
         if ($role_schema === 'Customer') {
             $initial_balance = 10000.00;
+        } 
+        
+        // Set approval status for business roles to PENDING (0)
+        if ($is_business_role) {
+            $is_approved = 0; // 0 = Pending Approval
         }
+        // Note: Admin should be 1 (Approved)
 
         if ($stmt = mysqli_prepare($db, $sql_user)) {
-            // Bind parameters: 3 strings, 1 integer, 1 double
-            mysqli_stmt_bind_param($stmt, "sssid", 
+            // Bind parameters: 3 strings, 1 integer, 1 double, 1 integer (for is_approved)
+            mysqli_stmt_bind_param($stmt, "sssidf", 
                 $param_email, 
                 $param_password, 
                 $param_contact, 
                 $param_location_id,
-                $param_balance // New: initial balance parameter
+                $param_balance,
+                $param_is_approved // NEW: Binding the approval status
             );
             $param_email = $email;
             $param_password = $hashed_password; 
             $param_contact = $contact;
             $param_location_id = $location_id;
             $param_balance = $initial_balance; // New: binding the balance
+            $param_is_approved = $is_approved; // NEW: binding the approval status
             
             if (!mysqli_stmt_execute($stmt)) {
-                throw new Exception('Failed to create user account.');
+                throw new Exception('Failed to create user account. (Check if is_approved column exists)');
             }
             $user_id = mysqli_insert_id($db);
             mysqli_stmt_close($stmt);
@@ -235,13 +250,21 @@ if (isset($_POST['register_submit'])) {
                 throw new Exception('Internal server error (SQL preparation failed for Vendors).');
             }
         }
+        // Note: Admin role does not require a Garage/Vendor entry
 
         // F. Commit the transaction if all inserts succeeded
         mysqli_commit($db);
         mysqli_close($db);
         
         // --- REGISTRATION SUCCESS REDIRECT: Redirects back to index.html with success status ---
-        $success_msg = "Registration successful! Your account is pre-funded with KES 10,000.00. Please log in as a " . ucwords($role_schema) . ".";
+        
+        // NEW: Custom success message based on role
+        if ($is_business_role) {
+            $success_msg = "Registration successful! Your business account is **pending approval** by the Administrator.";
+        } else {
+            $success_msg = "Registration successful! Your account is pre-funded with KES 10,000.00. Please log in as a " . ucwords($role_schema) . ".";
+        }
+        
         redirect_with_status('success', $success_msg); 
 
     } catch (Exception $e) {
@@ -269,11 +292,12 @@ else if (isset($_POST['login_submit'])) {
         redirect_with_status('error', 'Database connection failed. Check api_db_config.php.');
     }
 
-    // SQL: Fetch user details
+    // SQL: Fetch user details, including password, role, and approval status (NEW)
     $sql = "SELECT 
                 U.user_id, 
                 U.password AS hashed_password, 
-                R.role_name AS stored_role 
+                R.role_name AS stored_role,
+                U.is_approved
             FROM Users U
             JOIN UserRole UR ON U.user_id = UR.user_id
             JOIN Roles R ON UR.role_id = R.role_id
@@ -289,10 +313,26 @@ else if (isset($_POST['login_submit'])) {
             
             if (mysqli_stmt_num_rows($stmt) == 1) {
                 // Bind result variables
-                mysqli_stmt_bind_result($stmt, $user_id, $hashed_password, $stored_role);
+                // NOTE: U.is_approved is the 4th column selected in the SQL above (must match bind order)
+                mysqli_stmt_bind_result($stmt, $user_id, $hashed_password, $stored_role, $is_approved);
                 if (mysqli_stmt_fetch($stmt)) {
                     if (password_verify($password, $hashed_password)) {
-                        // Success!
+                        
+                        // NEW: Approval Check for Business Roles (Garage/Vendor)
+                        if ($stored_role === 'Garage' || $stored_role === 'Vendor') {
+                            if ($is_approved == 0) { // Pending
+                                mysqli_stmt_close($stmt);
+                                mysqli_close($db);
+                                redirect_with_status('error', 'Login failed: Your business account is still pending administrator approval.');
+                            } elseif ($is_approved == 2) { // Rejected/Suspended
+                                mysqli_stmt_close($stmt);
+                                mysqli_close($db);
+                                redirect_with_status('error', 'Login failed: Your business account has been suspended or rejected by the administrator.');
+                            }
+                            // If is_approved == 1, proceed to login success below.
+                        }
+                        
+                        // Success! (Or if not a business role, it proceeds here)
                         mysqli_stmt_close($stmt);
                         mysqli_close($db);
                         
