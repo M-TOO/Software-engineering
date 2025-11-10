@@ -152,7 +152,7 @@ if (isset($_POST['register_submit'])) {
 
         if ($stmt = mysqli_prepare($db, $sql_user)) {
             // Bind parameters: 3 strings, 1 integer, 1 double, 1 integer (for is_approved)
-            mysqli_stmt_bind_param($stmt, "sssidf", 
+            mysqli_stmt_bind_param($stmt, "sssidi", 
                 $param_email, 
                 $param_password, 
                 $param_contact, 
